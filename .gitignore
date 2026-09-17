@@ -1,0 +1,25 @@
+# Build output
+build/
+*.o
+*.a
+*.elf
+*.bin
+*.iso
+*.img
+
+# Toolchain / editor
+.cache/
+compile_commands.json
+.vscode/
+.idea/
+*~
+
+# QEMU / debug
+*.log
+qemu*.log
+*.core
+
+# For contributors using ai agents
+AGENTS.md
+.omo
+.codegraph
