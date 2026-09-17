@@ -13,6 +13,8 @@ compile_commands.json
 .vscode/
 .idea/
 *~
+.pyc
+*.pyc
 
 # QEMU / debug
 *.log
