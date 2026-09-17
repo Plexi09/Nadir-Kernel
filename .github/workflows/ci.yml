@@ -1,5 +1,7 @@
 # Nadir Kernel CI. Runs on every pull request and every push to main.
 #
+# Builds nadir.img with make, verifies the image, then boots it headless in
+# QEMU and asserts the kernel's welcome message reaches the screen.
 
 name: CI
 
@@ -20,7 +22,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install toolchain
+        # gcc, make and binutils ship with the runner; nasm and qemu do not.
         run: sudo apt-get update && sudo apt-get install -y nasm qemu-system-x86
 
-      - name: Build boot sector
-        run: nasm -f bin boot.asm -o boot.bin
+      - name: Build image
+        run: make
+
+      - name: Verify image
+        # Every check prints what it saw: a silent bare `test` once hid a
+        # failure here, so each assertion reports and names its own failure.
+        run: |
+          set -euo pipefail
+          ls -l nadir.img
+          size=$(stat -c %s nadir.img)
+          echo "image size: $size bytes"
+          test "$size" -ge 1024 || { echo "FAIL: image smaller than sector+kernel minimum"; exit 1; }
+          test $(( (size - 512) % 512 )) -eq 0 || { echo "FAIL: kernel part is not sector-aligned"; exit 1; }
+          sig=$(dd if=nadir.img bs=1 skip=510 count=2 2>/dev/null | od -A n -t x1 | tr -d ' \n')
+          echo "boot signature: $sig"
+          test "$sig" = "55aa" || { echo "FAIL: missing 0xAA55 boot signature"; exit 1; }
+          grep -q "Nadir" nadir.img || { echo "FAIL: kernel payload missing from image"; exit 1; }
+          echo "OK: nadir.img valid, boot signature and payload present"
+
+      - name: Boot and check welcome message in QEMU
+        run: python3 .github/scripts/check_boot.py nadir.img
