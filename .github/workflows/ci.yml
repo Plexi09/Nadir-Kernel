@@ -1,5 +1,7 @@
 # Nadir Kernel CI. Runs on every pull request and every push to main.
 #
+# Builds os.img with make, verifies the image, then boots it headless in
+# QEMU and asserts the kernel's welcome message reaches the screen.
 
 name: CI
 
@@ -20,7 +22,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install toolchain
+        # gcc, make and binutils ship with the runner; nasm and qemu do not.
         run: sudo apt-get update && sudo apt-get install -y nasm qemu-system-x86
 
-      - name: Build boot sector
-        run: nasm -f bin boot.asm -o boot.bin
+      - name: Build image
+        run: make
+
+      - name: Verify image
+        run: |
+          set -euo pipefail
+          test -f os.img
+          size=$(stat -c %s os.img)
+          test "$size" -ge 1024
+          test $(( (size - 512) % 512 )) -eq 0
+          sig=$(dd if=os.img bs=1 skip=510 count=2 2>/dev/null | od -A n -t x1 | tr -d ' \n')
+          test "$sig" = "55aa" || { echo "missing 0xAA55 boot signature"; exit 1; }
+          grep -q "Nadir" os.img || { echo "kernel payload missing from os.img"; exit 1; }
+          echo "os.img: $size bytes, boot signature and payload present"
+
+      - name: Boot and check welcome message in QEMU
+        run: python3 .github/scripts/check_boot.py os.img

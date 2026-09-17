@@ -23,3 +23,9 @@ qemu*.log
 AGENTS.md
 .omo
 .codegraph
+
+# Local scripts
+*.sh
+
+# Python bytecode (CI boot check)
+__pycache__/

@@ -33,11 +33,11 @@ Please stick to the following rules if you plan to use AI in your contributions:
 
 ## Building and running
 
-The current toolchain is two commands from the repository root. See the [README](README.md) for prerequisites and troubleshooting:
+Build from the repository root. See the [README](README.md) for prerequisites and troubleshooting:
 
 ```
-nasm -f bin boot.asm -o boot.bin
-qemu-system-x86_64 -fda boot.bin
+make        # builds os.img (boot sector + kernel)
+make run    # boots it in QEMU
 ```
 
 The toolchain is not yet finalized (candidates: `gcc` cross + `ld`, or `clang` + `lld` + `nasm`; target `x86-64-elf`).
