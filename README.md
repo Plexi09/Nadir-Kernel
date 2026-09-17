@@ -48,7 +48,7 @@ I can only recommend using Linux distribution, but the Windows Subsystem for Lin
 From the repository root:
 
 ```bash
-make        # builds os.img
+make        # builds nadir.img
 make run    # boots it in QEMU
 ```
 
@@ -73,7 +73,7 @@ Notes:
 |---|---|
 | `Boot failed: not a bootable disk` | The first 512 bytes of `nadir.img` are not a valid boot sector (they must end with the `0xAA55` signature). Re-run `make` and check it completes without errors. |
 | Black screen / blinking cursor | The boot sector only speaks legacy BIOS (`int 0x10` text mode). This works out of the box with QEMU's default SeaBIOS firmware but will not boot under UEFI-only firmware (or UEFI-only real hardware) unless legacy/CSM boot is enabled. |
-| QEMU reboots in a loop after `entering protected mode` (or before any C output) | A triple fault in the boot chain: the CPU crashed with no IDT installed and reset itself. Boot with `qemu-system-x86_64 -fda os.img -d int -no-reboot` and read the fault (`v=...`) plus registers from the log. |
+| QEMU reboots in a loop after `entering protected mode` (or before any C output) | A triple fault in the boot chain: the CPU crashed with no IDT installed and reset itself. Boot with `qemu-system-x86_64 -fda nadir.img -d int -no-reboot` and read the fault (`v=...`) plus registers from the log. |
 | No window appears under WSL2 | Use the `-display curses` variant above. It should work in any terminal. |
 
 ## How booting works

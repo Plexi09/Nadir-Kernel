@@ -18,7 +18,7 @@ import sys
 import termios
 import time
 
-IMAGE = sys.argv[1] if len(sys.argv) > 1 else "os.img"
+IMAGE = sys.argv[1] if len(sys.argv) > 1 else "nadir.img"
 NEEDLE = b"64-bit"
 BOOT_WAIT_S = 8
 

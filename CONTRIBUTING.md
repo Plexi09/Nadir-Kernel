@@ -36,7 +36,7 @@ Please stick to the following rules if you plan to use AI in your contributions:
 Build from the repository root. See the [README](README.md) for prerequisites and troubleshooting:
 
 ```
-make        # builds os.img (boot sector + kernel)
+make        # builds nadir.img (boot sector + kernel)
 make run    # boots it in QEMU
 ```
 

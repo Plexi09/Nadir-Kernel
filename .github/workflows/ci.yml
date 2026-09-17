@@ -1,6 +1,6 @@
 # Nadir Kernel CI. Runs on every pull request and every push to main.
 #
-# Builds os.img with make, verifies the image, then boots it headless in
+# Builds nadir.img with make, verifies the image, then boots it headless in
 # QEMU and asserts the kernel's welcome message reaches the screen.
 
 name: CI
@@ -29,16 +29,20 @@ jobs:
         run: make
 
       - name: Verify image
+        # Every check prints what it saw: a silent bare `test` once hid a
+        # failure here, so each assertion reports and names its own failure.
         run: |
           set -euo pipefail
-          test -f os.img
-          size=$(stat -c %s os.img)
-          test "$size" -ge 1024
-          test $(( (size - 512) % 512 )) -eq 0
-          sig=$(dd if=os.img bs=1 skip=510 count=2 2>/dev/null | od -A n -t x1 | tr -d ' \n')
-          test "$sig" = "55aa" || { echo "missing 0xAA55 boot signature"; exit 1; }
-          grep -q "Nadir" os.img || { echo "kernel payload missing from os.img"; exit 1; }
-          echo "os.img: $size bytes, boot signature and payload present"
+          ls -l nadir.img
+          size=$(stat -c %s nadir.img)
+          echo "image size: $size bytes"
+          test "$size" -ge 1024 || { echo "FAIL: image smaller than sector+kernel minimum"; exit 1; }
+          test $(( (size - 512) % 512 )) -eq 0 || { echo "FAIL: kernel part is not sector-aligned"; exit 1; }
+          sig=$(dd if=nadir.img bs=1 skip=510 count=2 2>/dev/null | od -A n -t x1 | tr -d ' \n')
+          echo "boot signature: $sig"
+          test "$sig" = "55aa" || { echo "FAIL: missing 0xAA55 boot signature"; exit 1; }
+          grep -q "Nadir" nadir.img || { echo "FAIL: kernel payload missing from image"; exit 1; }
+          echo "OK: nadir.img valid, boot signature and payload present"
 
       - name: Boot and check welcome message in QEMU
-        run: python3 .github/scripts/check_boot.py os.img
+        run: python3 .github/scripts/check_boot.py nadir.img
