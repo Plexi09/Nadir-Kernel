@@ -1,0 +1,39 @@
+name: Bug report
+description: The kernel doesn't build, doesn't boot, or misbehaves in QEMU
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw versus what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands, starting from a clean checkout.
+      placeholder: |
+        1. `nasm -f bin boot.asm -o boot.bin`
+        2. `qemu-system-x86_64 -fda boot.bin`
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS and tool versions.
+      placeholder: |
+        OS: Ubuntu 24.04
+        nasm: 2.16.01 (`nasm -v`)
+        QEMU: 8.2.2 (`qemu-system-x86_64 --version`)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste terminal output or attach a screenshot of the QEMU window.

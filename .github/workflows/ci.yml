@@ -1,0 +1,26 @@
+# Nadir Kernel CI. Runs on every pull request and every push to main.
+#
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-boot:
+    name: Build and boot in QEMU
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y nasm qemu-system-x86
+
+      - name: Build boot sector
+        run: nasm -f bin boot.asm -o boot.bin
