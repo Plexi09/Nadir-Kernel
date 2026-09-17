@@ -73,3 +73,8 @@ Notes:
 | `Boot failed: not a bootable disk` | `boot.bin` is not a valid boot sector: it must be exactly 512 bytes and end with the `0xAA55` boot signature. Re-run the `nasm` step and check it completes without errors. |
 | Black screen / blinking cursor | The boot sector only speaks legacy BIOS (`int 0x10` text mode). This works out of the box with QEMU's default SeaBIOS firmware but will not boot under UEFI-only firmware (or UEFI-only real hardware) unless legacy/CSM boot is enabled. |
 | No window appears under WSL2 | Use the `-display curses` variant above. It should work in any terminal. |
+
+
+## License
+
+This software is released under the MIT license. See the [LICENSE](LICENSE) file for details.
