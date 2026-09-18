@@ -20,7 +20,7 @@ CFLAGS := -std=c17 -ffreestanding -nostdlib -fno-builtin \
           -fno-pic -fno-pie -fno-stack-protector \
           -Wall -Wextra -Werror -O2 -Iinclude
 
-OBJS := $(BUILD)/entry.o $(BUILD)/kmain.o $(BUILD)/console.o
+OBJS := $(BUILD)/entry.o $(BUILD)/isr.o $(BUILD)/kmain.o $(BUILD)/console.o $(BUILD)/idt.o
 
 all: $(IMG)
 
@@ -30,10 +30,16 @@ $(BUILD):
 $(BUILD)/entry.o: $(ARCH_DIR)/entry.asm | $(BUILD)
 	$(NASM) -f elf64 $< -o $@
 
-$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h | $(BUILD)
+$(BUILD)/isr.o: $(ARCH_DIR)/isr.asm | $(BUILD)
+	$(NASM) -f elf64 $< -o $@
+
+$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/console.o: $(ARCH_DIR)/console.c include/console.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/idt.o: $(ARCH_DIR)/idt.c include/idt.h include/console.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/kernel.elf: $(OBJS) $(ARCH_DIR)/link.ld
