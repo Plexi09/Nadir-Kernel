@@ -56,17 +56,6 @@ A QEMU window opens and you should see this:
 
 ![Nadir booting in QEMU](docs/assets/boot.png)
 
-Notes:
-
-- `nadir.img` is a raw floppy image: the 512-byte boot sector first, then the kernel. `-fda` boots it as a BIOS floppy; QEMU's default firmware loads the sector at address `0x7C00` and executes it in 16-bit real mode.
-- `build/` and `nadir.img` are generated artifacts ignored by git. `make clean` removes them.
-- The C kernel builds with plain host `gcc` and freestanding flags for now (see `Makefile`); a dedicated `x86-64-elf` cross-compiler is the planned next step.
-- Running over SSH or in a bare terminal? `make run` needs a window; boot headless instead:
-  ```bash
-  qemu-system-x86_64 -fda nadir.img -display curses
-  ```
-  Quit with `Ctrl-A` then `X`.
-
 ### Troubleshooting
 
 | Symptom | Cause |
@@ -86,7 +75,7 @@ The full memory map lives in the header comment of `kernel/arch/x86_64/boot.asm`
 
 ## Contributing
 
-Every contribution is welcome. Please fork and send a pull request if you wish to contribute. You will be credited at the end of this very file. Please see the [CONTRIBUTING](CONTRIBUTING.md) file for more information.
+Every contribution is welcome. Please fork and send a pull request if you wish to contribute. You will be credited at the end of this very file. Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## License
 

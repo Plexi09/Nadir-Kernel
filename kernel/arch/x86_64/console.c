@@ -1,4 +1,4 @@
-/* Nadir console: VGA text-mode driver (see console.h). */
+/* VGA text-mode driver (see console.h). */
 
 #include <stdint.h>
 
@@ -9,14 +9,13 @@
 #define VGA_ADDR 0xB8000
 #define COLOR_DEFAULT 0x0FU /* white on black */
 
-/* Cursor position. Lives in BSS, zeroed by stage 2 before kmain runs. */
+/* Cursor position. Lives in BSS. */
 static uint8_t cursor_row;
 static uint8_t cursor_col;
 
-/* Text buffer: one 16-bit cell per character, low byte is the ASCII code,
+/* Text buffer, one 16-bit cell per character, low byte is the ASCII code,
  * high byte is the color attribute. `volatile` so the compiler keeps every
- * store in order: this is memory-mapped I/O, and dropped or reordered
- * writes would corrupt the screen. */
+ * store in order. */
 static volatile uint16_t *const vga = (uint16_t *)VGA_ADDR;
 
 /* Move every line one row up and blank the last line */
@@ -52,12 +51,12 @@ void console_putchar(char c)
             (uint16_t)((COLOR_DEFAULT << 8) | c);
         cursor_col++;
         if (cursor_col >= VGA_WIDTH) {
-            /* Past the right edge: wrap to the next line. */
+            /* Wrap to the next line. */
             cursor_col = 0;
             cursor_row++;
         }
     }
-    /* Past the bottom line: scroll and stay on the last line. */
+    /* Past the bottom line scroll and stay on the last line. */
     if (cursor_row >= VGA_HEIGHT) {
         scroll();
         cursor_row = VGA_HEIGHT - 1;
