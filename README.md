@@ -5,7 +5,7 @@ The name Nadir comes from the Arabic word *naẓīr*. In astronomy it means the 
 
 ## Status of the project
 
-The project is in its foundation phase and is not yet usable. The boot chain works: a BIOS boot sector loads the kernel, switches through 32-bit protected mode into 64-bit long mode, and runs C code (`kmain`) that prints to the screen. Next: interrupts (IDT), then memory management.
+The project is in its foundation phase and is not yet usable. How the boot chain works: a BIOS boot sector loads the kernel, switches through 32-bit protected mode into 64-bit long mode, and runs C code (`kmain`). The interrupt layer is live: CPU exceptions (vectors 0-31) print diagnostics, the 8259 PIC is remapped to vectors 32-47, the PIT ticks at 100 Hz on IRQ0, and PS/2 keyboard input on IRQ1 echoes to the VGA console (COM1 mirrors output at 38400 8N1). Next: memory management.
 
 ## Getting started
 
@@ -69,7 +69,7 @@ A QEMU window opens and you should see this:
 
 1. The BIOS loads the 512-byte sector (`kernel/arch/x86_64/boot.asm`) at `0x7C00`: it enables A20, loads the kernel to `0x10000`, installs a flat GDT, and enters 32-bit protected mode.
 2. The stage-2 entry (`kernel/arch/x86_64/entry.asm`) checks for long mode, identity-maps the first 1 GB with 2 MB pages, enables paging, jumps to 64-bit code, zeroes BSS, and calls `kmain`.
-3. `kmain` (`kernel/core/kmain.c`) prints through the VGA text console (`kernel/arch/x86_64/console.c`, `include/console.h`) and halts.
+3. `kmain` (`kernel/core/kmain.c`) installs the exception IDT, remaps the PIC, installs IRQ gates, starts the serial log, PIT and keyboard, enables interrupts (`sti`), then loops on `hlt`: uptime prints ~1/s and keystrokes echo via the VGA text console (`kernel/arch/x86_64/console.c`, `include/console.h`).
 
 The full memory map lives in the header comment of `kernel/arch/x86_64/boot.asm`.
 
