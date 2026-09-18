@@ -46,6 +46,21 @@ void console_putchar(char c)
     if (c == '\n') {
         cursor_row++;
         cursor_col = 0;
+    } else if (c == '\b') {
+        /* kmain echoes keyboard '\b' for editing. Without this the
+         * raw 0x08 glyph would print instead of erasing. Move back one
+         * cell and blank it (IRQ-safe: mainline only, IF=1 but the
+         * IRQ handlers never touch VGA). */
+        if (cursor_col > 0) {
+            cursor_col--;
+        } else if (cursor_row > 0) {
+            cursor_row--;
+            cursor_col = VGA_WIDTH - 1;
+        } else {
+            return;
+        }
+        vga[cursor_row * VGA_WIDTH + cursor_col] =
+            (uint16_t)((COLOR_DEFAULT << 8) | ' ');
     } else {
         vga[cursor_row * VGA_WIDTH + cursor_col] =
             (uint16_t)((COLOR_DEFAULT << 8) | c);
