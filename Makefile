@@ -20,7 +20,7 @@ CFLAGS := -std=c17 -ffreestanding -nostdlib -fno-builtin \
           -fno-pic -fno-pie -fno-stack-protector \
           -Wall -Wextra -Werror -O2 -Iinclude
 
-OBJS := $(BUILD)/entry.o $(BUILD)/isr.o $(BUILD)/kmain.o $(BUILD)/console.o $(BUILD)/idt.o
+OBJS := $(BUILD)/entry.o $(BUILD)/isr.o $(BUILD)/kmain.o $(BUILD)/console.o $(BUILD)/idt.o $(BUILD)/pic.o $(BUILD)/pit.o $(BUILD)/serial.o $(BUILD)/keyboard.o
 
 all: $(IMG)
 
@@ -33,13 +33,25 @@ $(BUILD)/entry.o: $(ARCH_DIR)/entry.asm | $(BUILD)
 $(BUILD)/isr.o: $(ARCH_DIR)/isr.asm | $(BUILD)
 	$(NASM) -f elf64 $< -o $@
 
-$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h | $(BUILD)
+$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h include/pic.h include/pit.h include/serial.h include/keyboard.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/console.o: $(ARCH_DIR)/console.c include/console.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/idt.o: $(ARCH_DIR)/idt.c include/idt.h include/console.h | $(BUILD)
+$(BUILD)/idt.o: $(ARCH_DIR)/idt.c include/idt.h include/console.h include/pic.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/pic.o: $(ARCH_DIR)/pic.c include/pic.h include/io.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/pit.o: $(ARCH_DIR)/pit.c include/pit.h include/idt.h include/io.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/serial.o: $(ARCH_DIR)/serial.c include/serial.h include/io.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/keyboard.o: $(ARCH_DIR)/keyboard.c include/keyboard.h include/idt.h include/pic.h include/io.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/kernel.elf: $(OBJS) $(ARCH_DIR)/link.ld
