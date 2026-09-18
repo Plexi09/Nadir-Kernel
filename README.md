@@ -77,6 +77,10 @@ The full memory map lives in the header comment of `kernel/arch/x86_64/boot.asm`
 
 Every contribution is welcome. Please fork and send a pull request if you wish to contribute. You will be credited at the end of this very file. Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
+## AI Usage
+
+I am not against the use of AI. But this is a learning project, so most of the code is written by me. AI is used to troubleshoot errors, explain certain mecanisms and write scripts & unit tests.
+
 ## License
 
 This software is released under the MIT license. See the [LICENSE](LICENSE) file for details.
