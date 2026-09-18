@@ -4,14 +4,17 @@
  * (kernel code selector 0x18). Privileged primitive: `lidt` in
  * idt_init(). Fault behavior: before idt_init() any fault
  * triple-faults; after, vectors 0-31 print diagnostics and halt.
- * Vectors 32-255 stay not-present until the PIC is remapped.
- * IF stays cleared; exceptions fire regardless of IF.
+ * Vectors 32-47 stay not-present until pic_remap() +
+ * idt_install_irqs() install the IRQ gates; vectors 48-255 stay
+ * not-present (no APIC yet). IF stays cleared; exceptions fire
+ * regardless of IF, IRQs only after the integrator runs `sti`.
  */
 
 #include <stdint.h>
 
 #include "console.h"
 #include "idt.h"
+#include "pic.h"
 
 /* 64-bit interrupt gate descriptor (Intel SDM Vol. 3, IDT gate). */
 struct idt_entry {
@@ -41,6 +44,14 @@ static struct idtr idtr;
 
 /* Stub addresses from isr.asm, one per exception vector 0-31. */
 extern uint64_t isr_stub_table[IDT_EXCEPTION_COUNT];
+
+/* Stub addresses from isr.asm, one per remapped IRQ vector 32-47. */
+extern uint64_t irq_stub_table[IDT_IRQ_COUNT];
+
+/* Per-IRQ handlers for lines 0-15; NULL means "EOI only".
+ * WHY a plain table: one subsystem per file — device drivers own
+ * their logic and only register a callback here. BSS-zeroed. */
+static void (*irq_handlers[IDT_IRQ_COUNT])(void);
 
 /* Install one gate: handler address + segment + IST index + flags. */
 static void idt_set_gate(uint8_t vector, uint64_t handler, uint16_t selector,
@@ -84,6 +95,41 @@ void idt_init(void)
     idtr.limit = (uint16_t)(sizeof(idt) - 1);
     idtr.base = (uint64_t)&idt[0];
     __asm__ volatile("lidt %0" ::"m"(idtr) : "memory");
+}
+
+void idt_install_irqs(void)
+{
+    for (uint16_t i = 0; i < IDT_IRQ_COUNT; i++) {
+        idt_set_gate((uint8_t)(IDT_IRQ_BASE + i), irq_stub_table[i],
+                     KERNEL_CS, 0, IDT_FLAG_PRESENT_INT);
+    }
+}
+
+void irq_register_handler(uint8_t irq, void (*handler)(void))
+{
+    if (irq >= IDT_IRQ_COUNT) {
+        return;
+    }
+    irq_handlers[irq] = handler;
+}
+
+void irq_dispatch(struct interrupt_frame *frame)
+{
+    uint64_t vector = frame->vector;
+    uint8_t irq;
+
+    if (vector < IDT_IRQ_BASE || vector >= IDT_IRQ_BASE + IDT_IRQ_COUNT) {
+        return;
+    }
+    irq = (uint8_t)(vector - IDT_IRQ_BASE);
+
+    /* WHY handler before EOI: the EOI re-arms the (edge-triggered) PIC
+     * line, so acking first would let the same IRQ re-enter before the
+     * driver finished. A NULL slot just gets an EOI. */
+    if (irq_handlers[irq] != 0) {
+        irq_handlers[irq]();
+    }
+    pic_eoi(irq);
 }
 
 void exception_handler(struct interrupt_frame *frame)

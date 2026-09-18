@@ -4,9 +4,12 @@
  * Privileged primitive: `lidt` in idt_init(). Fault behavior: before
  * idt_init() any exception triple-faults (no IDT); after, CPU vectors
  * 0-31 land in the assembly stubs (isr.asm) and then in
- * exception_handler(), which prints and halts. Vectors 32-255 are left
- * zero (not present) on purpose because PIC remap + IRQ handling is a later step.
+ * exception_handler(), which prints and halts. Vectors 32-47 stay
+ * not-present until the 8259 PIC is remapped and idt_install_irqs()
+ * installs the IRQ gates; then they land in irq_dispatch(), which
+ * sends the PIC EOI and calls the per-IRQ handler (if any).
  * Interrupts stay disabled throughout (IF=0); exceptions still fire.
+ * IRQs only fire after the integrator enables them with `sti`.
  */
 
 #ifndef NADIR_IDT_H
@@ -16,6 +19,10 @@
 
 /* Number of CPU exception vectors this base installs (0-31). */
 #define IDT_EXCEPTION_COUNT 32
+
+/* First remapped IRQ vector (IRQ 0 -> vector 32) and IRQ line count. */
+#define IDT_IRQ_BASE 32
+#define IDT_IRQ_COUNT 16
 
 /* Stack layout on entry to exception_handler().
  *
@@ -62,5 +69,23 @@ void idt_init(void);
 /* C entry point for vectors 0-31, called from isr_common with the
  * frame above. Prints vector/error/RIP and halts; never returns. */
 void exception_handler(struct interrupt_frame *frame);
+
+/* C entry point for vectors 32-47, called from irq_common with the
+ * same frame layout (vector = 32 + irq, error = 0 dummy). Runs at
+ * Ring 0 with IF cleared; sends the PIC EOI and calls the handler
+ * registered for that IRQ, if any. Spurious vectors outside 32-47
+ * are ignored. */
+void irq_dispatch(struct interrupt_frame *frame);
+
+/* Register `handler` for IRQ line `irq` (0-15); NULL unregisters.
+ * Preconditions: Ring 0, `irq` < 16 (out-of-range calls ignored).
+ * Failure modes: none; takes effect on the next IRQ after return. */
+void irq_register_handler(uint8_t irq, void (*handler)(void));
+
+/* Install the 16 IRQ gates (vectors 32-47 -> irq stubs) with selector
+ * 0x18 and flags 0x8E (present, DPL 0, 64-bit interrupt gate).
+ * Preconditions: Ring 0, idt_init() already ran, PIC already remapped
+ * via pic_remap(). Leaves IF cleared. Failure modes: none. */
+void idt_install_irqs(void);
 
 #endif /* NADIR_IDT_H */
