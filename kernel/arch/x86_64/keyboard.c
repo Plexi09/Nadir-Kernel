@@ -89,8 +89,6 @@ static uint8_t k_shift;
 static uint8_t k_caps;
 static uint8_t k_e0;
 
-/* Queue helpers below; port I/O comes from io.h. */
-
 /* Drop-newest on full: keeps the consumer's prefix intact for editing. */
 static void enqueue(char c)
 {

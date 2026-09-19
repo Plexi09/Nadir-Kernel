@@ -18,7 +18,6 @@ static uint8_t cursor_col;
  * store in order. */
 static volatile uint16_t *const vga = (uint16_t *)VGA_ADDR;
 
-/* Move every line one row up and blank the last line */
 static void scroll(void)
 {
     for (uint8_t row = 1; row < VGA_HEIGHT; row++) {
