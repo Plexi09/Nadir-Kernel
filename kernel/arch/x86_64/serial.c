@@ -41,7 +41,6 @@ void serial_putchar(char c)
     /* Spin until THR is empty; hangs only if hardware is absent/wedged,
      * which is why callers gate on serial_ok() when unsure. */
     while ((inb(COM_LSR) & LSR_TX_EMPTY) == 0) {
-        /* Poll. */
     }
     outb(COM_DATA, (uint8_t)c);
 }
