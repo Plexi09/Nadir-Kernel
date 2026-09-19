@@ -8,4 +8,4 @@
 - [ ] Boots in QEMU and shows the expected output
 - [ ] No generated artifacts committed (`*.o`, `*.bin`, `*.iso`, `build/` etc)
 - [ ] Documentation updated if behavior changed
-- [ ] AI policy respected: code is human-authored (or fully understood) see [CONTRIBUTING.md](CONTRIBUTING.md)
+- [ ] Code is human-authored (or fully understood) see [CONTRIBUTING.md](../docs/CONTRIBUTING.md)

@@ -75,7 +75,7 @@ The full memory map lives in the header comment of `kernel/arch/x86_64/boot.asm`
 
 ## Contributing
 
-Every contribution is welcome. Please fork and send a pull request if you wish to contribute. You will be credited at the end of this very file. Please see [CONTRIBUTING](CONTRIBUTING.md) for more information.
+Every contribution is welcome. Please fork and send a pull request if you wish to contribute. You will be credited at the end of this very file. Please see [CONTRIBUTING](docs/CONTRIBUTING.md) for more information.
 
 ## AI Usage
 
