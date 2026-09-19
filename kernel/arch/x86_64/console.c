@@ -17,7 +17,7 @@
 #define VGA_CRT_CURSOR_HIGH 0x0EU
 #define VGA_CRT_CURSOR_LOW 0x0FU
 
-/* Cursor position. Lives in BSS. */
+/* Cursor position, lives in BSS. */
 static uint8_t cursor_row;
 static uint8_t cursor_col;
 
@@ -27,11 +27,9 @@ static uint8_t cursor_col;
 static volatile uint16_t *const vga = (uint16_t *)VGA_ADDR;
 
 /* Sync the blinking hardware cursor to cursor_row/cursor_col.
- * WHY it exists: writing VGA cells alone never moves the CRT cursor, so
- * without this the hardware cursor stays where SeaBIOS left it (issue #3).
  * Runs at Ring 0 (CPL 0): `out` traps with #GP(0) if CPL > IOPL, so this
- * must never run in userspace. A wrong port value cannot fault (open bus
- * ignores it); it would only misplace the visible cursor. */
+ * must never run in userspace. A wrong port value cannot fault,
+ * it would only misplace the visible cursor. */
 static void update_hw_cursor(void)
 {
     uint16_t pos = (uint16_t)(cursor_row * VGA_WIDTH + cursor_col);
