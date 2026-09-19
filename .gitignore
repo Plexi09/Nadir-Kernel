@@ -13,12 +13,10 @@ compile_commands.json
 .vscode/
 .idea/
 *~
-.pyc
 *.pyc
 
 # QEMU / debug
 *.log
-qemu*.log
 *.core
 
 # For contributors using ai agents

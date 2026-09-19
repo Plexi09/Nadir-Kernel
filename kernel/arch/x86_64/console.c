@@ -42,7 +42,6 @@ static void update_hw_cursor(void)
     outb(VGA_CRT_DATA, (uint8_t)((pos >> 8) & 0xFFU));
 }
 
-/* Move every line one row up and blank the last line */
 static void scroll(void)
 {
     for (uint8_t row = 1; row < VGA_HEIGHT; row++) {
