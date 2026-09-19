@@ -36,7 +36,7 @@ $(BUILD)/isr.o: $(ARCH_DIR)/isr.asm | $(BUILD)
 $(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h include/pic.h include/pit.h include/serial.h include/keyboard.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/console.o: $(ARCH_DIR)/console.c include/console.h | $(BUILD)
+$(BUILD)/console.o: $(ARCH_DIR)/console.c include/console.h include/io.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/idt.o: $(ARCH_DIR)/idt.c include/idt.h include/console.h include/pic.h | $(BUILD)
