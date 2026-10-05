@@ -20,7 +20,7 @@ CFLAGS := -std=c17 -ffreestanding -nostdlib -fno-builtin \
           -fno-pic -fno-pie -fno-stack-protector \
           -Wall -Wextra -Werror -O2 -Iinclude
 
-OBJS := $(BUILD)/entry.o $(BUILD)/isr.o $(BUILD)/kmain.o $(BUILD)/console.o $(BUILD)/idt.o $(BUILD)/pic.o $(BUILD)/pit.o $(BUILD)/serial.o $(BUILD)/keyboard.o
+OBJS := $(BUILD)/entry.o $(BUILD)/isr.o $(BUILD)/kmain.o $(BUILD)/klog.o $(BUILD)/console.o $(BUILD)/idt.o $(BUILD)/pic.o $(BUILD)/pit.o $(BUILD)/serial.o $(BUILD)/keyboard.o $(BUILD)/pmm.o
 
 all: $(IMG)
 
@@ -33,7 +33,13 @@ $(BUILD)/entry.o: $(ARCH_DIR)/entry.asm | $(BUILD)
 $(BUILD)/isr.o: $(ARCH_DIR)/isr.asm | $(BUILD)
 	$(NASM) -f elf64 $< -o $@
 
-$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h include/pic.h include/pit.h include/serial.h include/keyboard.h | $(BUILD)
+$(BUILD)/kmain.o: kernel/core/kmain.c include/console.h include/idt.h include/pic.h include/pit.h include/serial.h include/keyboard.h include/pmm.h include/e820.h include/klog.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/klog.o: kernel/core/klog.c include/klog.h include/console.h include/pit.h | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/pmm.o: kernel/mm/pmm.c include/pmm.h include/e820.h | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/console.o: $(ARCH_DIR)/console.c include/console.h include/io.h | $(BUILD)
