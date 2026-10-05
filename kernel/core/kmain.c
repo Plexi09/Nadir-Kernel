@@ -9,6 +9,10 @@
  * after every device is programmed; the main loop keeps IF=1 and sleeps
  * in `hlt` (which wakes on each IRQ) — never `cli`-parks, or timer ticks
  * and keystrokes would stop. It never returns; on return the caller halts.
+ *
+ * Every line goes through klog`[    0.000000] subsystem: message`, 
+ * time from pit_ticks()/PIT_HZ).
+ * Serial COM1 mirrors the same text without the timestamp prefix.
  */
 
 #include <stdint.h>
@@ -16,33 +20,15 @@
 #include "console.h"
 #include "idt.h"
 #include "keyboard.h"
+#include "klog.h"
 #include "pic.h"
 #include "pit.h"
+#include "pmm.h"
 #include "serial.h"
 
 /* A value that only comes out right if the CPU truly executes 64-bit
  * arithmetic: every nibble survives the shifts above 32 bits. */
 #define PROOF_VALUE 0x0123456789ABCDEFULL
-
-/* Print an unsigned decimal via console_putchar (no libc printf). */
-static void print_dec(uint64_t v)
-{
-    char buf[20];
-    int n = 0;
-
-    if (v == 0) {
-        console_putchar('0');
-        return;
-    }
-    while (v != 0 && n < (int)sizeof(buf)) {
-        buf[n++] = (char)('0' + (v % 10U));
-        v /= 10U;
-    }
-    while (n > 0) {
-        n--;
-        console_putchar(buf[n]);
-    }
-}
 
 /* Mirror one echoed keystroke to COM1 when the UART looks present. */
 static void serial_echo(char c, int ok)
@@ -70,8 +56,9 @@ void kmain(void)
     uint64_t last_uptime;
 
     console_clear();
-    console_puts("Hello World from Nadir Kernel !\n");
-    console_puts("Running C code in 64-bit long mode (Ring 0).\n");
+    /* Boot banner: keeps the "64-bit" needle the CI boot checker greps
+     * for (see .github/scripts/check_boot.py). */
+    klog("nadir", "Hello World from Nadir kernel (64-bit long mode, Ring 0)");
 
     /* WHY this order: pic_remap must precede idt_install_irqs so IRQ
      * gates land on valid remapped vectors 32-47 (pre-remap they would
@@ -80,33 +67,51 @@ void kmain(void)
      * fires into a half-wired handler; pic_remap masks everything and
      * each device opts in via pic_unmask, so stray lines stay silent. */
     idt_init();
-    console_puts("IDT installed (vectors 0-31).\n");
+    klog("idt", "exceptions 0-31 installed");
 
     pic_remap();
-    console_puts("PIC remapped (IRQ 0-15 -> vectors 32-47, masked).\n");
+    klog("pic", "remapped IRQ 0-15 to vectors 32-47");
 
     idt_install_irqs();
-    console_puts("IRQ gates installed (vectors 32-47).\n");
+    klog("idt", "IRQ gates 32-47 installed");
 
     serial_init();
     serial_present = serial_ok();
-    console_puts("Serial COM1 38400 8N1 ready.\n");
+    klog("serial", "COM1 38400 8N1 ready");
     if (serial_present != 0) {
-        serial_puts("Hello World from Nadir Kernel !\n");
-        serial_puts("Serial COM1 38400 8N1 ready.\n");
+        serial_puts("Hello World from Nadir kernel\n");
     }
 
     pit_init();
-    console_puts("PIT 100Hz on IRQ0 ready.\n");
+    klog("pit", "100Hz on IRQ0");
     if (serial_present != 0) {
-        serial_puts("PIT 100Hz on IRQ0 ready.\n");
+        serial_puts("pit: 100Hz on IRQ0\n");
     }
 
     keyboard_init();
-    console_puts("Keyboard PS/2 IRQ1 ready.\n");
+    klog("keyboard", "PS/2 ready on IRQ1");
     if (serial_present != 0) {
-        serial_puts("Keyboard PS/2 IRQ1 ready.\n");
+        serial_puts("keyboard: PS/2 ready on IRQ1\n");
     }
+
+    /* pmm_init only reads the staged E820 globals and writes
+     * its own .bss bitmap, so it runs
+     * after all devices are programmed but before sti, with IF=0, so no
+     * handler can observe a half-built allocator. Stats go through the
+     * polling VGA console, which is IRQ-safe by construction. */
+    pmm_init(memmap_count, memmap_entries);
+    klog_begin("pmm");
+    klog_str("E820 entries ");
+    klog_dec(memmap_count);
+    klog_str(", usable frames ");
+    klog_dec(pmm_usable_count());
+    klog_str(" / total frames ");
+    klog_dec(pmm_total_count());
+    klog_str(", free frames ");
+    klog_dec(pmm_free_count());
+    klog_str(", reserved ");
+    klog_dec(pmm_usable_count() - pmm_free_count());
+    klog_end();
 
     /* Explicit opt-in for the two live lines; idempotent even though
      * keyboard_init already unmasked IRQ1. */
@@ -114,14 +119,16 @@ void kmain(void)
     pic_unmask(1);
 
     __asm__ volatile("sti");
-    console_puts("Interrupts enabled (IRQs 0-1).\n");
+    klog("nadir", "interrupts enabled (IRQs 0-1)");
     if (serial_present != 0) {
-        serial_puts("Interrupts enabled (IRQs 0-1).\n");
+        serial_puts("nadir: interrupts enabled (IRQs 0-1)\n");
     }
 
-    console_puts("64-bit proof value: ");
-    console_puthex64(PROOF_VALUE);
-    console_puts("\nHalting in hlt loop (timer + keyboard live).\n");
+    klog_begin("nadir");
+    klog_str("64-bit proof value: ");
+    klog_hex64(PROOF_VALUE);
+    klog_end();
+    klog("nadir", "halting in hlt loop (timer + keyboard live)");
 
     /* Main loop: hlt sleeps until the next IRQ (IF=1 throughout), then
      * one poll pass prints uptime ~1/s and drains echoed keys. */
@@ -136,13 +143,15 @@ void kmain(void)
             uint64_t tenths = (now / 10U) % 10U;
 
             last_uptime = now;
-            console_puts("uptime ");
-            print_dec(secs);
-            console_puts(".");
-            print_dec(tenths);
-            console_puts("s (ticks ");
-            console_puthex64(now);
-            console_puts(")\n");
+            klog_begin("nadir");
+            klog_str("uptime ");
+            klog_dec(secs);
+            klog_str(".");
+            klog_dec(tenths);
+            klog_str("s (ticks ");
+            klog_hex64(now);
+            klog_str(")");
+            klog_end();
             if (serial_present != 0) {
                 serial_puts("uptime (see VGA for value)\n");
             }
