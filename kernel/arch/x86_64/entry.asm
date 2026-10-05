@@ -9,8 +9,14 @@
 ;
 ; Steps: verify long mode exists, identity-map the first 1GB with 2MB
 ; pages, enable PAE + LME + paging, reload a GDT with a 64-bit code
-; segment, zero BSS, then call the C entry point kmain (System V ABI).
+; segment, zero BSS, copy the BIOS memory map staged by stage 1 into
+; kernel .bss, then call the C entry point kmain (System V ABI).
 ; Interrupts stay disabled for the whole sequence.
+;
+; WHY copy after zeroing: the map globals live in .bss, so zeroing first
+; then copying keeps the staged entries. Zeroing after would wipe them;
+; copying before is impossible (BSS addresses are only valid once paging
+; and the zeroed state the C code expects are both in place).
 
 bits 32
 section .boot32
@@ -18,11 +24,17 @@ global boot32_entry
 extern kmain
 extern __bss_start
 extern __bss_end
+extern memmap_count
+extern memmap_entries
 
 PML4        equ 0x70000
 PDPT        equ 0x71000
 PD          equ 0x72000
 STACK64_TOP equ 0x90000
+MEMMAP_COUNT_PHYS equ 0x5000        ; dword staged by stage 1
+MEMMAP_BUF_PHYS   equ 0x5020        ; 24-byte E820 entries staged by stage 1
+E820_MAX          equ 64
+E820_ENTRY_SIZE   equ 24
 
 boot32_entry:
     ; --- CPUID: does this CPU do 64-bit long mode? ---
@@ -120,6 +132,25 @@ long_entry:
     sub rcx, rdi
     xor eax, eax
     rep stosb
+
+    ; --- copy staged E820 map into .bss globals (identity map covers
+    ; both 0x5000 and .bss, and paging is already on) ---
+    ; WHY byte + clamp: stage 1 stages a single count byte (64 max fits);
+    ; the clamp is belt-and-braces against a corrupt staging byte.
+    movzx eax, byte [abs MEMMAP_COUNT_PHYS]
+    cmp eax, E820_MAX
+    jbe .map_count_ok
+    mov eax, E820_MAX
+.map_count_ok:
+    mov [rel memmap_count], eax
+    test eax, eax
+    jz .map_done
+    mov rsi, MEMMAP_BUF_PHYS
+    lea rdi, [rel memmap_entries]
+    mov ecx, eax
+    imul ecx, ecx, E820_ENTRY_SIZE  ; bytes = count * 24
+    rep movsb
+.map_done:
 
     call kmain                      ; first C code — does not return
     cli

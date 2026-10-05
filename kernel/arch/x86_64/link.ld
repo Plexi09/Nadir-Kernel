@@ -17,6 +17,8 @@ SECTIONS
 {
     . = 0x10000;
 
+    __kernel_start = .;
+
     .boot : {
         *(.boot32)
     }
@@ -39,6 +41,8 @@ SECTIONS
         *(COMMON)
         __bss_end = .;
     }
+
+    __kernel_end = .;
 
     /DISCARD/ : {
         *(.note*)
