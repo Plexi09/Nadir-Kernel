@@ -21,6 +21,7 @@
 #include "idt.h"
 #include "keyboard.h"
 #include "klog.h"
+#include "kmalloc.h"
 #include "pic.h"
 #include "pit.h"
 #include "pmm.h"
@@ -112,6 +113,49 @@ void kmain(void)
     klog_str(", reserved ");
     klog_dec(pmm_usable_count() - pmm_free_count());
     klog_end();
+
+    /* Heap self-test. init, then alloc/write/free churn to prove the
+     * free-list split and re-insert paths work before interrupts go
+     * live. Runs with IF=0, polling console only. */
+    kmalloc_init();
+    {
+        uint8_t *a = kmalloc(100);
+        uint8_t *b = kmalloc(5000); /* spans 2 frames */
+        uint8_t *c = kmalloc(1);
+        int ok = 1;
+
+        if (a == 0 || b == 0 || c == 0) {
+            ok = 0;
+        } else {
+            uint64_t i;
+
+            for (i = 0; i < 100U; i++) {
+                a[i] = (uint8_t)i;
+            }
+            for (i = 0; i < 100U; i++) {
+                if (a[i] != (uint8_t)i) {
+                    ok = 0;
+                }
+            }
+            b[0] = 0xAAU;
+            b[4999] = 0x55U;
+            if (b[0] != 0xAAU || b[4999] != 0x55U) {
+                ok = 0;
+            }
+        }
+        kfree(a);
+        kfree(b);
+        kfree(c);
+        kfree(0); /* NULL must be a no-op */
+        klog_begin("kmalloc");
+        klog_str("self-test ");
+        klog_str(ok != 0 ? "ok" : "FAILED");
+        klog_str(", free frames ");
+        klog_dec(kmalloc_free_frames());
+        klog_str(", used frames ");
+        klog_dec(kmalloc_used_frames());
+        klog_end();
+    }
 
     /* Explicit opt-in for the two live lines; idempotent even though
      * keyboard_init already unmasked IRQ1. */
